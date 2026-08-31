@@ -1,0 +1,63 @@
+# Kepler / Frontier Bench task: afterquery/crash-resilient-scheduler
+# Declared output artifacts are transferred (at their original absolute
+# paths) from the agent container into the separate sealed verifier.
+artifacts = [
+    "/logs/state.journal.jsonl",
+    "/logs/results.json",
+    "/logs/persisted_state.json",
+]
+
+version = "1.0"
+
+[task]
+name = "afterquery/crash-resilient-scheduler"
+version = "1.0.0"
+description = "Implement a crash-resilient distributed job scheduler with persistent state, dependency DAG handling, priority ordering, lease-based claiming, retries, and recovery from worker crashes and full restarts."
+
+[metadata]
+# Fill in with the submitter's own details.
+author_name = "TODO: Your Name"
+author_email = "TODO: you@example.com"
+
+category = "Software"
+subcategory = "Systems"
+
+tags = [
+    "distributed-systems",
+    "scheduler",
+    "crash-recovery",
+    "exactly-once",
+    "persistence",
+    "concurrency",
+    "priority-queue",
+    "dag",
+]
+
+expert_time_estimate_hours = 8
+domain_professional_experience = "5+ years designing and operating distributed batch schedulers, job queues, and fault-tolerant backend systems"
+
+difficulty_explanation = "The agent must build a concurrent, persistent job scheduler that survives real process kills. Correctness depends on crash-safe persistence, atomic lease-based claiming, dependency (DAG) resolution, priority ordering, retry with backoff semantics, and exactly-once completion. These interact: a worker killed mid-job must have its lease recovered and the job re-dispatched without duplicate execution or lost state, and a coordinator SIGKILL + restart must reload committed state. Naive in-memory queues, non-atomic claim protocols, or firing jobs before dependencies complete all fail the sealed verification. This is a genuine multi-hour systems-engineering exercise requiring concurrency + durability reasoning, not trivia or obscure knowledge."
+
+solution_explanation = "A reference coordinator runs a tick loop that (1) recovers expired claims whose worker heartbeat is stale, (2) releases jobs whose dependencies are all DONE in priority order, and (3) atomically hands ready jobs to idle live workers via O_CREAT|O_EXCL claim files. Workers heartbeat, atomically claim released jobs, journal execution_started with a unique execution_id, run the command, journal execution_finished, and mark DONE only once (guarded by on-disk status), honoring max_retries on failure. All transitions are appended to a hash-chained, fsync-ed journal and jobs are written with atomic temp-file+rename persistence, so a SIGKILL + restart reloads committed state and never duplicates work."
+
+verification_explanation = "The sealed verifier (separate verifier image) reads only the declared /logs artifacts: the append-only hash-chained journal, the final state snapshot, and results.json. It checks journal chain integrity (sequential seq, hash chain, monotonic timestamps), that all scenario jobs are DONE, exactly-once completion (one job_done and one rc==0 execution per job), that crash recovery actually occurred for the injected worker kill (>=2 distinct execution starts + a lease-recovered event), dependency ordering (dependent jobs only finish/start after all deps), priority release order (P1 before P2), restart persistence (>=2 scheduler_start instances and A's DONE status preserved), no duplicate execution ids, and consistency between results.json and the journal's job_done set. Reward is exactly 1 iff every check passes, else 0."
+
+[agent]
+timeout_sec = 1800.0
+
+[verifier]
+timeout_sec = 300.0
+environment_mode = "separate"
+
+[verifier.environment]
+cpus = 2
+memory_mb = 1024
+
+[environment]
+os = "linux"
+cpus = 2
+memory_mb = 2048
+storage_mb = 20480
+gpus = 0
+gpu_types = []
+build_timeout_sec = 600.0
