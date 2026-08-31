@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Project Issues
+    url: https://github.com/isackkibet/-Frontier-Bench-/issues
+    about: Please report issues using the provided issue templates.
