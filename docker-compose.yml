@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: environment/Dockerfile
+    volumes:
+      - ./environment/starter:/scheduler
+      - ./logs:/logs
+    environment:
+      - SCHEDULER_WORKERS=2
+    command: python3 /scheduler/scheduler.py serve --workers 2
+
+  verifier:
+    build:
+      context: .
+      dockerfile: tests/Dockerfile
+    volumes:
+      - ./logs:/logs
+    depends_on:
+      - agent
+
+  test:
+    build:
+      context: .
+      dockerfile: tests/Dockerfile
+    volumes:
+      - ./logs:/logs
+    command: python3 /tests/test_grader.py
