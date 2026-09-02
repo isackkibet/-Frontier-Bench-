@@ -16,8 +16,8 @@ description = "Implement a crash-resilient distributed job scheduler with persis
 
 [metadata]
 # Fill in with the submitter's own details.
-author_name = "TODO: Your Name"
-author_email = "TODO: you@example.com"
+author_name = "isackkibet"
+author_email = "isackkibet97@gmail.com"
 
 category = "Software"
 subcategory = "Systems"

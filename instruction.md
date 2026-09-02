@@ -1,123 +1,235 @@
 # Crash-resilient distributed job scheduler
 
-## Overview
+Overview
 
-You must complete a small production-style job scheduler in Python so that it
-behaves correctly under real failures — worker processes that are killed
-mid-job, and a scheduler that is killed and restarted on the same persistent
-state. The scheduler must enforce dependency (DAG) ordering, priority-based
-dispatch, retries with a maximum attempt budget, and exactly-once completion of
-every job, while keeping all committed state durable across restarts.
+The starter Python scheduler is already in `/scheduler/`. The task is to
+complete it so it can keep working when processes fail. A worker can be
+killed while it is running a job, and the scheduler itself can also be killed
+and started again using the same saved data. Jobs that were already committed
+must not disappear or be executed twice.
 
-A starter skeleton lives in `/scheduler/` (Python modules). The hard engineering
-is yours: you implement the core scheduler logic inside those modules. A
-deterministic crash-injection harness is provided at
-`/scheduler/harness/scenario.py`; you run it as the last step to publish the
-outputs that get graded.
+The scheduler needs to handle the normal scheduling work as well: dependency
+ordering, job priorities, retries with a maximum attempt limit, and worker
+leases. These rules must continue to work after a crash or restart.
 
-## What is already provided
+The crash test is provided in `/scheduler/harness/scenario.py`. Run that
+harness after the implementation is complete. It generates the files used
+for grading. Do not change the harness.
 
-- `/scheduler/constants.py` — paths, tunables, status constants.
-- `/scheduler/journal.py` — an append-only, hash-chained, fsync-ed audit
-  journal with a process-safe `append(event)` (a `Journal` class). Use it for
-  every durable transition; the journal is the main evidence that is checked.
-- `/scheduler/models.py` — helpers (`now_ms`, `new_id`, `atomic_write_json`,
-  `read_json`).
-- `/scheduler/store.py` — a `Store` for job records (atomic writes) and the
-  journal handle; `Store.new_job` already journals a `submitted` event.
-- `/scheduler/scheduler.py` — CLI: `submit`, `serve`, `status`, `dump-state`.
-  `serve --workers N` must launch a coordinator and N worker **processes** so
-  the harness can kill individual workers.
-- `/scheduler/coordinator.py`, `/scheduler/worker.py` — stubs whose docstrings
-  are the specification. You implement the bodies.
-- `/scheduler/harness/scenario.py` — the deterministic scenario; do not modify
-  it. If your implementation is correct, it exits 0 with every job DONE.
+What is already provided
 
-## What to implement
+The project already contains most of the supporting code. The main files are:
+
+- `/scheduler/constants.py` — contains the paths, configuration values, and
+  status constants used by the scheduler.
+
+- `/scheduler/journal.py` — contains the append-only audit journal. It is
+  hash-chained and uses `fsync` so entries are durable. The `Journal` class
+  provides a process-safe `append(event)` method. Every durable state change
+  needs to be recorded here because the journal is checked by the grader.
+
+- `/scheduler/models.py` — contains common helper functions such as
+  `now_ms`, `new_id`, `atomic_write_json`, and `read_json`.
+
+- `/scheduler/store.py` — provides the `Store` used for job records and the
+  journal. `Store.new_job` already records the `submitted` event.
+
+- `/scheduler/scheduler.py` — provides the CLI commands `submit`, `serve`,
+  `status`, and `dump-state`. The `serve --workers N` command must start one
+  coordinator and N separate worker processes. The workers need to be
+  separate processes because the test harness kills individual workers.
+
+- `/scheduler/coordinator.py` and `/scheduler/worker.py` — contain the
+  coordinator and worker stubs. Their docstrings describe the expected
+  behaviour. The missing implementation needs to be added here.
+
+- `/scheduler/harness/scenario.py` — contains the deterministic crash test.
+  Do not modify this file. With a correct implementation, the scenario should
+  exit with status 0 and all jobs should finish as `DONE`.
+
+ What needs to be implemented
 
 Implement `/scheduler/coordinator.py` (`Coordinator`) and
-`/scheduler/worker.py` (`Worker`) and finish the wiring in `scheduler.py`. The
-scheduler must satisfy these invariants:
+`/scheduler/worker.py` (`Worker`). You also need to finish the required
+process wiring in `scheduler.py`.
 
-1. **Persistence.** Every job record is stored under
-   `/scheduler/data/jobs/<name>.json` via crash-safe atomic writes (temp file +
-   fsync + rename). All state lives under `/scheduler/data/` and survives a
-   SIGKILL of the scheduler and its workers. On startup the coordinator reloads
-   all job records from disk.
+The scheduler has to meet the following requirements.
 
-2. **Dependencies.** A job is *released* (eligible for dispatch) only after
-   every job in its `deps` is `DONE`. A dependent job must not start executing
-   before all of its dependencies finish. Release is recorded with a `release`
-   journal event exactly once per job.
+1. Persistence
 
-3. **Priority.** When multiple jobs are simultaneously ready, dispatch in order
-   of `priority` (lower numeric value = higher priority) and, within equal
-   priority, by submission order (`submitted_ms`).
+Every job must have its own persistent record at:
 
-4. **Lease-based claiming (exactly-once).** Ready jobs are claimed by workers
-   through atomic claim files under `/scheduler/data/claims/<name>.json`
-   created with `O_CREAT | O_EXCL` so no two workers ever claim the same job.
-   Each execution uses a unique `execution_id`. A worker that crashes leaves
-   its claim behind; the coordinator must detect that the claiming worker's
-   heartbeat has gone stale, remove the claim, journal a `lease_expired` event,
-   and return the job to an eligible state so it can be re-dispatched. A job is
-   marked `DONE` (journal `job_done`) exactly once, and only after a successful
-   run.
+`/scheduler/data/jobs/<name>.json`
 
-5. **Retries.** If a claimed job's command exits non-zero, count it against
-   `max_retries`; if retries remain, re-enqueue it (journal `retry_scheduled`)
-   so it can be attempted again; otherwise mark it `FAILED` (journal
-   `job_failed`).
+Use crash-safe atomic writes when updating these records. The write should
+use a temporary file, `fsync`, and then rename the file into place.
 
-6. **Restart resilience.** Killing and restarting the scheduler + all workers
-   must not lose committed work and must not cause any job to be completed
-   twice. The coordinator journals a `scheduler_start` event (with a unique
-   instance id) each time it boots.
+All scheduler state must remain under `/scheduler/data/` and must still be
+available after a `SIGKILL` of the scheduler or any worker.
 
-The `Journal.append(event)` method takes a dict with a `"kind"` field. The event
-vocabulary the harness and grader rely on is: `submitted`, `release`, `assign`,
-`execution_started`, `execution_finished`, `lease_expired`, `retry_scheduled`,
-`job_done`, `job_failed`, `scheduler_start`. Emit them as described in the
+When the coordinator starts, it must read the existing job records from disk.
+It cannot depend only on state that was held in memory before the restart.
+
+2. Dependencies
+
+A job is only ready for dispatch after every job listed in its `deps` has
+reached `DONE`.
+
+For example, if `B` depends on `A`, `B` must not start while `A` is still
+running or waiting for a retry. For the DAG in the test, `B` and `C` depend
+on `A`, while `D` depends on both `B` and `C`.
+
+When a job becomes eligible, the coordinator must record a `release` event.
+A job should only have one release event.
+
+ 3. Priority
+
+When more than one job is ready at the same time, the coordinator must
+choose them by priority.
+
+A smaller numeric `priority` value means higher priority.
+
+If two jobs have the same priority, the earlier `submitted_ms` value wins.
+This gives jobs with the same priority a deterministic submission order.
+
+4. Lease-based claiming and exactly-once completion
+
+Ready jobs are claimed through files in:
+
+`/scheduler/data/claims/<name>.json`
+
+Claim creation must use:
+
+`O_CREAT | O_EXCL`
+
+The claim operation must be atomic so two workers cannot successfully claim
+the same job.
+
+Each execution must have a new and unique `execution_id`.
+
+A worker that is killed can leave its claim file behind. The coordinator has
+to detect that the worker's heartbeat is stale. When that happens, it must
+remove the old claim, record a `lease_expired` event, and make the job
+available for another attempt.
+
+A job can only be marked `DONE` after a successful execution. The successful
+completion must produce a `job_done` event.
+
+A completed job must not receive another `job_done` event, even if the
+scheduler is restarted. Execution IDs must also never be reused.
+
+### 5. Retries
+
+When a job command exits with a non-zero return code, that execution has
+failed and must count against the job's `max_retries` limit.
+
+If the job still has retries available, put it back into the state where it
+can be dispatched again and record a `retry_scheduled` event.
+
+If there are no retries left, mark the job as `FAILED` and record a
+`job_failed` event.
+
+A successful command must not be retried. It should proceed to `DONE`.
+
+### 6. Restart recovery
+
+The scheduler must be able to stop and start again without losing committed
+state.
+
+When the coordinator starts, it must recover the jobs from
+`/scheduler/data/`. A job that was already completed before the restart must
+remain completed and must not be completed a second time.
+
+Every new coordinator process must write a `scheduler_start` event with a
+unique instance ID.
+
+The journal event names required by the harness and grader are:
+
+`submitted`, `release`, `assign`, `execution_started`,
+`execution_finished`, `lease_expired`, `retry_scheduled`, `job_done`,
+`job_failed`, `scheduler_start`
+
+Use these event names exactly and follow the event details described in the
 stub docstrings.
 
-## How to run
+how to run test
 
-From `/scheduler`:
+Run the scenario from `/scheduler`:
 
     python3 /scheduler/harness/scenario.py
 
-The harness starts your scheduler, submits jobs `A, B, C, D, E, P1, P2`
-(A → B,C → D), SIGKILLs the worker executing `A` mid-job, waits for recovery,
-SIGKILLs the coordinator and workers and restarts them, then finishes the DAG.
-It must exit 0 with all jobs `DONE`.
+The test creates these seven jobs:
 
-## Required deliverables (absolute paths)
+`A, B, C, D, E, P1, P2`
 
-After a successful run, the harness writes these files under `/logs/`, which
-are the graded artifacts:
+The main dependency chain is:
 
-- `/logs/state.journal.jsonl` — the audit journal (copied from the state dir).
-- `/logs/results.json` — job status summary.
-- `/logs/final_state/` — snapshot of `/scheduler/data/` (jobs, claims,
-  heartbeats, journal, pids).
+`A → B,C → D`
 
-The grader reads only these paths. If they are missing or internally
-inconsistent, the task is scored 0.
+The harness first allows the scheduler to start working, then kills the
+worker that is running `A`. The scheduler has to notice that the worker's
+lease expired and arrange for `A` to be attempted again.
 
-## Grading summary
+Later, the harness kills the coordinator and all workers and starts the
+scheduler again. The new processes must recover the existing state and
+continue from there.
 
-The verifier checks that: all seven scenario jobs are `DONE`; the journal hash
-chain is intact with strictly sequential `seq` and non-decreasing timestamps;
-each job has exactly one `job_done` and exactly one successful
-(`rc == 0`) `execution_finished`; `A` actually crashed and was re-attempted
-(more than one distinct `execution_started` plus a `lease_expired`); every
-dependent job finishes and starts only after its dependencies; `P1` is released
-before `P2`; there were at least two distinct `scheduler_start` events (restart)
-and `A`'s `DONE` state survived; no `execution_id` is reused or finished twice;
-and `results.json` agrees with the set of `job_done` events in the journal.
+The expected result is that the harness exits with status 0 and all seven
+jobs finish in the `DONE` state.
 
-Work outside `/scheduler` is irrelevant to the result. Make the real scheduler
-correct; do not attempt to fabricate or reorder the journal, since the grader
-validates its integrity and cross-file consistency.
+Required deliverables
+
+After a successful run, the harness creates these files under `/logs/`:
+
+- `/logs/state.journal.jsonl` — the audit journal copied from the scheduler's
+  state directory.
+
+- `/logs/results.json` — contains the final status summary for the jobs.
+
+- `/logs/persisted_state.json` — contains a snapshot of
+  `/scheduler/data/`, including jobs, claims, heartbeats, journal data, and
+  PID information.
+
+These are the files the grader reads. If they are missing or their contents
+do not agree with each other, the task receives a score of 0.
+ Grading summary
+
+All grading is done using the three `/logs/` files above. The verifier checks
+that:
+
+- all seven jobs (`A`, `B`, `C`, `D`, `E`, `P1`, and `P2`) finish as `DONE`;
+
+- the journal chain is valid: sequence numbers increase by exactly one,
+  timestamps never go backwards, and every hash correctly links to the
+  previous journal entry;
+
+- every job has exactly one `job_done` event and exactly one successful
+  execution where `rc == 0`;
+
+- job `A` was actually interrupted and recovered. The journal must show
+  more than one distinct `execution_started` event for `A` and a
+  `lease_expired` event for `A`;
+
+- dependency ordering is respected. `B` and `C` cannot start before `A`
+  finishes, and `D` cannot start before both `B` and `C` finish;
+
+- `P1` is released before `P2`;
+
+- there are at least two different `scheduler_start` events, showing that
+  the scheduler was restarted, and the `DONE` state of `A` survives that
+  restart;
+
+- no `execution_id` is reused and no execution is recorded as finished more
+  than once;
+
+- `results.json` agrees with the set of `job_done` events recorded in the
+  journal.
+
+Anything outside `/scheduler/` is irrelevant to the result. The important
+thing is that the scheduler itself handles the failures correctly.
+
+Do not try to create fake journal entries or reorder existing entries to
+make the output pass. The verifier checks the journal hash chain and also
+compares the different output files, so inconsistent state will be detected.
 
 You have 1800 seconds to complete this task. Do not cheat by using online solutions or hints specific to this task.
