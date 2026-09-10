@@ -4,10 +4,6 @@
 # in at their original absolute paths (/logs/...) and mounts /logs/verifier.
 FROM python:3.13-slim-bookworm
 
-# Apt packages are intentionally NOT version-pinned.
-RUN apt-get update \
-    && rm -rf /var/lib/apt/lists/*
-
 # Verifier dependencies are pre-installed at build time (never in test.sh).
 RUN python3 -m pip install --no-cache-dir --upgrade pip \
     && python3 -m pip install --no-cache-dir \
