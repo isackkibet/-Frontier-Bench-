@@ -10,13 +10,11 @@ schema below and the journal event vocabulary documented in the instruction
 so the provided harness and the sealed verifier can parse your output.
 """
 
-import json
 import os
-import fcntl
-import time
-from constants import JOBS_DIR, JOURNAL_PATH
+
+from constants import JOBS_DIR
 from journal import Journal
-from models import atomic_write_json, new_id, now_ms, read_json
+from models import atomic_write_json, now_ms, read_json
 
 JOB_FIELDS = [
     "name", "status", "priority", "deps", "cmd",
