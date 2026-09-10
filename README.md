@@ -1,5 +1,7 @@
 # Frontier Bench — Crash-Resilient Distributed Job Scheduler
 
+[![CI](https://github.com/isackkibet/-Frontier-Bench-/actions/workflows/ci.yml/badge.svg)](https://github.com/isackkibet/-Frontier-Bench-/actions/workflows/ci.yml)
+
 A production-grade benchmark task for evaluating AI coding agents on **distributed systems engineering**. The agent must implement a crash-resilient job scheduler that handles real process kills, persistent state, dependency DAGs, and exactly-once execution guarantees.
 
 ## Overview
