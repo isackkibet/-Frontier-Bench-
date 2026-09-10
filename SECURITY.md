@@ -25,7 +25,7 @@ You should receive a response within 48 hours. If you don't, please follow up.
 - We will notify you when the vulnerability is fixed
 - We will credit you for the discovery if you wish
 
-Security Best Practices
+## Security Best Practices
 
 When contributing, please:
 
