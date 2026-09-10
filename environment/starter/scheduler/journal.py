@@ -17,10 +17,11 @@ uninterrupted sequence across every writer process even if a process is
 SIGKILLed mid-append.
 """
 
+import fcntl
 import hashlib
 import json
 import os
-import fcntl
+
 from constants import JOURNAL_PATH
 from models import now_ms
 
