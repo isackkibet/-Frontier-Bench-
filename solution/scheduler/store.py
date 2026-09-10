@@ -6,9 +6,10 @@ coordinator.py and worker.py and uses these primitives.
 """
 
 import os
-from constants import JOBS_DIR, JOURNAL_PATH
+
+from constants import JOBS_DIR
 from journal import Journal
-from models import atomic_write_json, new_id, now_ms, read_json
+from models import atomic_write_json, now_ms, read_json
 
 
 def job_path(name):
