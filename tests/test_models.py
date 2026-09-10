@@ -5,10 +5,8 @@ distributed scenario harness, so they can run quickly in ordinary CI without
 Docker or real process kills.
 """
 
-import json
 import os
 import sys
-import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "solution", "scheduler"))
 
