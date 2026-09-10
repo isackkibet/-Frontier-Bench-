@@ -1,8 +1,8 @@
 services:
   agent:
     build:
-      context: .
-      dockerfile: environment/Dockerfile
+      context: ./environment
+      dockerfile: Dockerfile
     volumes:
       - ./environment/starter:/scheduler
       - ./logs:/logs
@@ -10,8 +10,8 @@ services:
 
   verifier:
     build:
-      context: .
-      dockerfile: tests/Dockerfile
+      context: ./tests
+      dockerfile: Dockerfile
     volumes:
       - ./logs:/logs
     depends_on:
@@ -19,8 +19,8 @@ services:
 
   test:
     build:
-      context: .
-      dockerfile: tests/Dockerfile
+      context: ./tests
+      dockerfile: Dockerfile
     volumes:
       - ./logs:/logs
     command: python3 -m pytest /tests/test_grader.py -v --tb=short
