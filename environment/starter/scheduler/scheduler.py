@@ -29,8 +29,9 @@ import os
 import shutil
 import subprocess
 import sys
+
+from constants import PIDS_DIR, STATE_DIR
 from store import Store
-from constants import STATE_DIR, PIDS_DIR
 
 
 def cmd_submit(args, store):
@@ -55,8 +56,9 @@ def cmd_status(args, store):
 
 
 def cmd_serve(args, store):
-    from coordinator import Coordinator
     import signal
+
+    from coordinator import Coordinator
 
     store.open()
     os.makedirs(PIDS_DIR, exist_ok=True)
