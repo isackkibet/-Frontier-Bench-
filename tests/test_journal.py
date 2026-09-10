@@ -19,7 +19,6 @@ import journal  # noqa: E402
 def _make_journal():
     tmp = tempfile.mkdtemp()
     constants.JOURNAL_PATH = os.path.join(tmp, "journal.jsonl")
-    constants.DATA_DIR = tmp
     return journal.Journal(constants.JOURNAL_PATH)
 
 
