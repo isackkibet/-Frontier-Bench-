@@ -184,7 +184,7 @@ def file_tail(path):
 def main():
     reset()
     tail = JournalTail(JOURNAL)
-    log(f"state dir reset; launching scheduler")
+    log("state dir reset; launching scheduler")
     srv = launch()
     time.sleep(3)
 
