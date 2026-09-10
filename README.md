@@ -15,16 +15,23 @@ frontier-bench/
 ├── README.md              # This file
 ├── instruction.md         # Task instructions for the agent
 ├── task.toml              # Benchmark metadata and configuration
+├── ruff.toml              # Lint scope/ruleset
+├── docker-compose.yml     # Local agent + verifier + test services
 ├── environment/
 │   ├── Dockerfile         # Agent environment container
 │   └── starter/           # Starter skeleton for the agent
 ├── solution/
 │   ├── solve.sh           # Reference solution launcher
 │   └── scheduler/         # Complete reference implementation
-└── tests/
-    ├── Dockerfile         # Sealed verifier image
-    ├── test.sh            # Verifier launcher
-    └── test_grader.py     # Grading logic (not visible to agent)
+├── tests/
+│   ├── Dockerfile         # Sealed verifier image
+│   ├── test.sh            # Verifier launcher
+│   ├── test_grader.py     # Grading logic (not visible to agent)
+│   ├── test_models.py     # Unit tests for shared helpers (plain CI)
+│   └── test_journal.py    # Unit tests for the audit journal (plain CI)
+└── .github/
+    ├── workflows/ci.yml   # Lint + unit test pipeline
+    └── ISSUE_TEMPLATE/    # Bug/feature/docs/question templates
 ```
 
 ## Task Requirements
