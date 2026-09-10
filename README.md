@@ -94,15 +94,11 @@ Multiple valid implementations exist — there is no single "correct answer" to 
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes (`git commit -m 'Add your feature'`)
-4. Push to the branch (`git push origin feature/your-feature`)
-5. Open a Pull Request
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the branching strategy, commit message conventions, and PR checklist.
 
 ## License
 
-This project is part of the Kepler Frontier Bench initiative for evaluating AI coding agents on complex software engineering tasks.
+MIT — see [LICENSE](LICENSE). This project is part of the Kepler Frontier Bench initiative for evaluating AI coding agents on complex software engineering tasks.
 
 ## Acknowledgments
 
