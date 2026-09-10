@@ -13,12 +13,16 @@ import subprocess
 import sys
 import threading
 import time
-from store import Store
+
 from constants import (
-    STATE_DIR, CLAIMS_DIR, HEARTBEATS_DIR,
-    WORKER_HEARTBEAT_SEC, WORKER_CLAIM_POLL_SEC,
+    CLAIMS_DIR,
+    HEARTBEATS_DIR,
+    STATE_DIR,
+    WORKER_CLAIM_POLL_SEC,
+    WORKER_HEARTBEAT_SEC,
 )
 from models import new_id
+from store import Store
 
 
 class Worker:
