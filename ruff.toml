@@ -1,0 +1,11 @@
+# Lint scope for Frontier Bench.
+#
+# `environment/starter/` is the intentionally-incomplete skeleton handed to
+# the agent under test (it contains scaffolding imports and NotImplementedError
+# stubs by design), so it is excluded from lint rather than "fixed".
+extend-exclude = ["environment/starter"]
+
+[lint]
+# Keep the ruleset to the pragmatic core CONTRIBUTING.md describes (PEP 8 +
+# pyflakes + import sorting) rather than ruff's full opinionated add-on set.
+select = ["E4", "E7", "E9", "F", "I"]
