@@ -1,6 +1,6 @@
 # Crash-resilient distributed job scheduler
 
-Overview
+## Overview
 
 The starter Python scheduler is already in `/scheduler/`. The task is to
 complete it so it can keep working when processes fail. A worker can be
@@ -16,7 +16,7 @@ The crash test is provided in `/scheduler/harness/scenario.py`. Run that
 harness after the implementation is complete. It generates the files used
 for grading. Do not change the harness.
 
-What is already provided
+## What is already provided
 
 The project already contains most of the supporting code. The main files are:
 
@@ -47,7 +47,7 @@ The project already contains most of the supporting code. The main files are:
   Do not modify this file. With a correct implementation, the scenario should
   exit with status 0 and all jobs should finish as `DONE`.
 
- What needs to be implemented
+## What needs to be implemented
 
 Implement `/scheduler/coordinator.py` (`Coordinator`) and
 `/scheduler/worker.py` (`Worker`). You also need to finish the required
@@ -55,7 +55,7 @@ process wiring in `scheduler.py`.
 
 The scheduler has to meet the following requirements.
 
-1. Persistence
+### 1. Persistence
 
 Every job must have its own persistent record at:
 
@@ -70,7 +70,7 @@ available after a `SIGKILL` of the scheduler or any worker.
 When the coordinator starts, it must read the existing job records from disk.
 It cannot depend only on state that was held in memory before the restart.
 
-2. Dependencies
+### 2. Dependencies
 
 A job is only ready for dispatch after every job listed in its `deps` has
 reached `DONE`.
@@ -82,7 +82,7 @@ on `A`, while `D` depends on both `B` and `C`.
 When a job becomes eligible, the coordinator must record a `release` event.
 A job should only have one release event.
 
- 3. Priority
+### 3. Priority
 
 When more than one job is ready at the same time, the coordinator must
 choose them by priority.
@@ -92,7 +92,7 @@ A smaller numeric `priority` value means higher priority.
 If two jobs have the same priority, the earlier `submitted_ms` value wins.
 This gives jobs with the same priority a deterministic submission order.
 
-4. Lease-based claiming and exactly-once completion
+### 4. Lease-based claiming and exactly-once completion
 
 Ready jobs are claimed through files in:
 
@@ -152,7 +152,7 @@ The journal event names required by the harness and grader are:
 Use these event names exactly and follow the event details described in the
 stub docstrings.
 
-how to run test
+## How to run the test
 
 Run the scenario from `/scheduler`:
 
@@ -177,7 +177,7 @@ continue from there.
 The expected result is that the harness exits with status 0 and all seven
 jobs finish in the `DONE` state.
 
-Required deliverables
+## Required deliverables
 
 After a successful run, the harness creates these files under `/logs/`:
 
@@ -192,7 +192,7 @@ After a successful run, the harness creates these files under `/logs/`:
 
 These are the files the grader reads. If they are missing or their contents
 do not agree with each other, the task receives a score of 0.
- Grading summary
+## Grading summary
 
 All grading is done using the three `/logs/` files above. The verifier checks
 that:
