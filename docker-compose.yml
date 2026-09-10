@@ -25,4 +25,4 @@ services:
       dockerfile: tests/Dockerfile
     volumes:
       - ./logs:/logs
-    command: python3 /tests/test_grader.py
+    command: python3 -m pytest /tests/test_grader.py -v --tb=short
