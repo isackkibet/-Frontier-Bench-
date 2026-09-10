@@ -6,8 +6,6 @@ services:
     volumes:
       - ./environment/starter:/scheduler
       - ./logs:/logs
-    environment:
-      - SCHEDULER_WORKERS=2
     command: python3 /scheduler/scheduler.py serve --workers 2
 
   verifier:
