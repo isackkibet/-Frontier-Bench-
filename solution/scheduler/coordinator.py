@@ -15,16 +15,20 @@ exactly one completed execution. We guard the DONE transition by checking the
 on-disk status before journaling.
 """
 
+import json
 import os
 import time
-import json
-import fcntl
-from store import Store
+
 from constants import (
-    STATE_DIR, CLAIMS_DIR, HEARTBEATS_DIR,     PIDS_DIR,
-    LEASE_RECHECK_SEC, DEFAULT_LEASE_SEC, WORKER_HEARTBEAT_SEC,
+    CLAIMS_DIR,
+    DEFAULT_LEASE_SEC,
+    HEARTBEATS_DIR,
+    LEASE_RECHECK_SEC,
+    STATE_DIR,
+    WORKER_HEARTBEAT_SEC,
 )
-from models import now_ms, new_id, read_json
+from models import new_id, now_ms, read_json
+from store import Store
 
 
 class Coordinator:
